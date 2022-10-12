@@ -52,12 +52,9 @@ NB. implementation details:
 NB. - no classes for enodes/eclasses as this would hamper array implementation + performance.
 NB. - jegg class represents egraph, keeps eclasses in unionfind
 NB. - based partially on https://colab.research.google.com/drive/1tNOQijJqe5tw-Pk9iqd6HHb2abC5aRid?usp=sharing
-NB. Matters to be decided TODO
-NB. - how to handle modifier trains? I presume these should treat u:: and v:: as final arguments without cnsidering the resulting verb's arguments; certainly because they can return any type!
-NB. - should modifiers (trains) be handled by the same graph as verbs?
 coclass 'jsym'
-PRIMADV=:;:'~//./..\\.]:}b.f.M.'
-PRIMCON=:;:'^: . : :. :: ;.!.!:[.]."` @ @. @:&&.&:&.:F.F..F.:F:F:.F::H.L:S:t.'
+NB. PRIMADV=:;:'~//./..\\.]:}b.f.M.'
+NB. PRIMCON=:;:'^: . : :. :: ;.!.!:[.]."` @ @. @:&&.&:&.:F.F..F.:F:F:.F::H.L:S:t.'
 create=: {{
   NB. uf stores parents and class sizes (size correct for roots only, due to path compression)
   ecid   =: unionfind 0
@@ -83,12 +80,13 @@ NB. 3 : fork
 NB. 4 : modifier train (N/A for the moment)
 NB. applied adv/conj, followed by list of args (N/V)
 NB. add_enode+add_node: y: string rep (for now) of fun to be added
+
 NB. add enode y= (ar);(arg classes) , or a bare string, which should contain 'leaf' argument (i.e. a primitive; or symterm like x:: or y::)
 NB. TODO or better str instead of ar? arg classes is one box with N args
 adden =: {{
-  y =. 2 {. boxopen y NB. TODO: assertions needed?
+  yy =. 2 {. boxopen y NB. TODO: assertions needed?
   NB. canonicalise y to get enode
-  newen =. ({. , find__ecid each@}.) y
+  newen =. ({. , find__ecid each@}.) yy
   if. (#en)=eciInd=.enlu newen do. NB. new enode not known yet
     NB. inc version if needed
     eciInd =. {. add__ecid 1    NB. create new eclass id
@@ -102,58 +100,59 @@ adden =: {{
   end.
   find__ecid ec{~eciInd
 }}
-NB. addxxx  : add different parts of speech, y=AR, awgmented with outer layer of arguments x::,y::,u::,v::,m::,n::
+NB. add : add different parts of speech, y=AR,<list of args. 
 NB.  each recursively descends through AR
 NB. add: dyad: recursively add enodes
 NB. x: type adv/conj/monad/dyad = 1 to 4
 NB. y: AR to add
 add =: {{
-  'y args' =. 2{.boxopen y NB. discard outer box.
+  'op args' =. 2{.boxopen y NB. discard outer box.
   NB. TODO: could probably be more robust; actually only monad/dyad needs disambiguation.
-  NB. TODO: no tracking of part of type/shape
-  if. -. *#args do.
-    NB. pre-create args for type& add already
-    args =. 2 2$;:'v::u::x::y::'
-    NB. |.^:(x=2) because adv take  
-    args  =. |.^:(x=2) (-1+-.2|x){. args{~ x>1 NB. add needed arguments to graph
-    NB. store arg enodes
+  NB. if arguments are boxed, internalise them
+  if. *L.args do.
     args  =. ([: adden '';~])&> args
   end.
 
-  NB. Treat literal: prim or named verb
-  if. 0=L. y do. adden y;args return. end.
-  NB. Others: recurse through tree, top down (as only top knows which args go where)
-  select. >{.y
+  NB. Literal: prim (also adv/conj!) or named verb 
+  if. 0=L. op do.
+    NB. add verb as leaf. application on args done by RW rules.
+    adden op;args 
+    return.
+  end.
+  NB. Others: recurse through tree, top down
+  select. >{.op
     case. ,'0' do. NB. noun directly call adden.
-      adden <y return.   NB. takes no args; needs box to keep adden to interpret values as arguments.
+      adden <op return.   NB. takes no args; needs box to keep adden to interpret values as arguments.
     case. ,'2' do. NB. hook
-      'f g'=. >{:y
-      x add f;({.args), 3 add g;{:args return.
+      add 'h::';add&>{:op
     case. ,'3' do. NB. fork
-      'f g h'=. >{:y
-      NB. note: [: has to be special, because changes g from dyad to monad
-      if. f-:,'[:' do.
-        3 add g;x add h;args return. NB. elide @: TODO OK?
-      else.
-        4 add g;(x add f;args),x add h;args return.
-      end.
-      'shouldn''t happen' assert 0
+      add 'f::';add&>{:op
     case. ,'4' do. NB. modifier train
       'mod train nyi' assert 0
     case. do. NB. applied adv (1 arg)/conj (2 args)
-      NB. TODO: What about arguments???
-      NB. because at this stage, nothing is interpreted. But how verbs are applied to args depends on which conjunction:
-      NB. one should interpret, i.e. execute the adv/conjunction, at which point it could be removed from the representations... and things like rank start mattering as well.
-      NB. So, perhaps adverbs and conjunctions should have 3 and 4 args...
-      NB. Possible solutions:
-      NB. - enode arguments x y u v, being _1 where not applicable.
-      NB. - encode part-of-speech a0 (a1)
-      NB. - Don't:
-      NB.   - treat as homogenous verb block (misses out on all verb internals...)
-      NB.   - 2 separate e-graphs for verbs on nouns and adv/conj on anything
-      NB.   - adapt egraph with different structure for 
-      'adv/conj nyi' assert 0
+      add (>{.op);add&>>{:op
   end.
+}}
+
+NB. apply verb to args: x 3 or 4 for monad/dyad, y AR of verb. if x not given; >{:y should be list of argument AR's. If arguments are not passed, placeholder arguments x:: and y:: are used as left/right arg.
+applyv =:((2+#@>@{:) $: ]) : {{
+  'vb args' =. 2{.boxopen y NB. discard outer box.
+  NB. TODO: extend later to allow passing verb as eclassid as well?
+  yv=. (<vb) 5!:0          NB. rehydrate verb from AR.
+  assert 3 4 e.~ yc=d nc yv NB. should be verb.
+  assert x (3&=@] +. =) yc  NB. if yc dyad, x should be too
+  assert (-.*#args)+.(#args)=x-2 NB. dyad should get 2 args, monad 1, if present.
+  if. -. *#args do.
+    NB. pre-create args for type& add already
+    args=. (;:'x::y::'){.~2-x
+    NB. store arg enodes
+  else.
+    NB. TODO: future: user gives arguments for analysis, rather than using placeholder arguments
+    NB. could use type,shape to influence (conditional) rewrite rules.
+    
+  end.
+  NB. add apply node with args, after adding y if needed.
+  add 'a::';(add vb),([: adden '';~])&>args
 }}
 
 sym_z_ =: conew&'jsym'
