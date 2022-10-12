@@ -39,7 +39,7 @@ unionfind_z_=:conew&'unionfind'
 NB. jsym - j's version of egraphs great
 NB. ========================================
 NB. terms used:
-NB. enode: operation applied to arguments 
+NB. enode: operation applied to arguments
 NB. canonical enode: operation with canonical arguments
 NB. canonical arg: where the arg is the root of the eclass i.e. find__uf y.
 NB. eclass: equivalence class containing equivalent enodes, i.e. representing the same result
@@ -100,7 +100,7 @@ adden =: {{
   end.
   find__ecid ec{~eciInd
 }}
-NB. add : add different parts of speech, y=AR,<list of args. 
+NB. add : add different parts of speech, y=AR,<list of args.
 NB.  each recursively descends through AR
 NB. add: dyad: recursively add enodes
 NB. x: type adv/conj/monad/dyad = 1 to 4
@@ -113,24 +113,28 @@ add =: {{
     args  =. ([: adden '';~])&> args
   end.
 
-  NB. Literal: prim (also adv/conj!) or named verb 
+  NB. Literal: prim (also adv/conj!) or named verb
   if. 0=L. op do.
-    NB. add verb as leaf. application on args done by RW rules.
-    adden op;args 
-    return.
+    if. *&1 :: 0: op do. NB. numeric -> eclass id, not prim
+      op return.
+    else.
+      NB. add verb as leaf. application on args done by RW rules.
+      adden op;args
+      return.
+    end.
   end.
   NB. Others: recurse through tree, top down
   select. >{.op
     case. ,'0' do. NB. noun directly call adden.
       adden <op return.   NB. takes no args; needs box to keep adden to interpret values as arguments.
     case. ,'2' do. NB. hook
-      add 'h::';add&>{:op
+      add 'h::';add"0 >{:op return.
     case. ,'3' do. NB. fork
-      add 'f::';add&>{:op
+      add 'f::'; add"0 >{:op return.
     case. ,'4' do. NB. modifier train
       'mod train nyi' assert 0
     case. do. NB. applied adv (1 arg)/conj (2 args)
-      add (>{.op);add&>>{:op
+      add (>{.op);add"0 >{:op return.
   end.
 }}
 
@@ -149,10 +153,26 @@ applyv =:((2+#@>@{:) $: ]) : {{
   else.
     NB. TODO: future: user gives arguments for analysis, rather than using placeholder arguments
     NB. could use type,shape to influence (conditional) rewrite rules.
-    
+
   end.
   NB. add apply node with args, after adding y if needed.
-  add 'a::';(add vb),([: adden '';~])&>args
+  add 'a::';(add <vb),([: adden '';~])&>args
+}}
+
+NB. merge: tell egraph eclass x and y calculate same value/represent same verb
+merge =: {{
+  NB. y=. a, b of colab version's merge
+  y=.find__ecid"0 y
+  'a b'=. y
+  if. =/y do. {.y return. end.
+  NB. inc version if keeping
+  NB. crossref parents
+  par__ecid =: b a} par__ecid
+  NB. add uses of {.y to those of {:y and remove uses from {.y
+  eciuses =: (a: , ,&.>/ y{eciuses) y} eciuses
+  NB. at this point, enodes are no longer necessarily canonical. Keep node to repair (y)
+  work =: work,b
+  b NB. return merge result
 }}
 
 sym_z_ =: conew&'jsym'
