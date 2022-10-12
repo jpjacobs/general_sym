@@ -1,0 +1,22 @@
+J Symbolic addon
+
+Manipulates J as symbols in egraph
+Inspired by https://colab.research.google.com/drive/1tNOQijJqe5tw-Pk9iqd6HHb2abC5aRid?usp=sharing#scrollTo=4YJ14dN1awEA
+
+Implemented:
+- V: implemented unionfind
+- implemented sym class with
+  - create method for making new egraph, where enodes are part of eclasses, and refer to eclassid's of eclasses which they have as arguments.
+  - adden method to add enodes, being AR, references to argument eclasses. This is the low-level interface used by add.
+  - add, which does the heavy lifting of recursing through AR's, adding (implied) arguments and verbs on the way
+    - Does work for hooks and forks (monad and dyad) of named or primitive verbs.
+
+Not yet implemented:
+- the add method for:
+  - applied conjunctions (e.g. +:@>:)
+  - Though applied conjunction, will need extensive separate treatment: explicit definitions
+  - modifier trains
+- repairing the egraph
+- rebuilding the egraph
+- applying rewrite rules in the egraph
+- ... 
