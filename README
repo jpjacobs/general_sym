@@ -7,13 +7,14 @@ Implemented:
 - V: implemented unionfind
 - implemented sym class with
   - create method for making new egraph, where enodes are part of eclasses, and refer to eclassid's of eclasses which they have as arguments.
-  - adden method to add enodes, being AR, references to argument eclasses. This is the low-level interface used by add.
+  - adden method to add enodes, being (AR, references to argument eclasses). This is the low-level interface used by add.
   - add, which does the heavy lifting of recursing through AR's, adding (implied) arguments and verbs on the way
-    - Does work for hooks and forks (monad and dyad) of named or primitive verbs.
+    - verbs are applied to nouns using an apply enode (a::, vbid, argids)
+    - hooks and forks have a special enode h:: and f:: , followed by references to their constituent verbssuch that semantics are not required, and they are treated pretty much the same as adverbs and conjunctions.
+  - applied adverbs and conjunctions take verbs (leafs).
 
 Not yet implemented:
 - the add method for:
-  - applied conjunctions (e.g. +:@>:)
   - Though applied conjunction, will need extensive separate treatment: explicit definitions
   - modifier trains
 - repairing the egraph
