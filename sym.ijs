@@ -86,7 +86,7 @@ NB. TODO or better str instead of ar? arg classes is one box with N args
 adden =: {{
   yy =. 2 {. boxopen y NB. TODO: assertions needed?
   NB. canonicalise y to get enode
-  newen =. ({. , find__ecid each@}.) yy
+  newen =. ({. , find__ecid"0&.>@{:) yy
   if. (#en)=eciInd=.enlu newen do. NB. new enode not known yet
     NB. inc version if needed
     eciInd =. {. add__ecid 1    NB. create new eclass id
@@ -165,14 +165,64 @@ merge =: {{
   y=.find__ecid"0 y
   'a b'=. y
   if. =/y do. {.y return. end.
-  NB. inc version if keeping
-  NB. crossref parents
+  NB. inc version if keeping it
+  NB. put b as parent to a
   par__ecid =: b a} par__ecid
-  NB. add uses of {.y to those of {:y and remove uses from {.y
-  eciuses =: (a: , ,&.>/ y{eciuses) y} eciuses
+  NB. add uses of a to those of b and remove uses from a
+  eciuses =: ((<0 3$a:) , ,&.>/ y{eciuses) y} eciuses
   NB. at this point, enodes are no longer necessarily canonical. Keep node to repair (y)
   work =: work,b
   b NB. return merge result
+}}
+
+NB. rebuild by repairing all eclasses in work list, ignores arguments
+rebuild =: {{)m
+  while. *# work do.
+    todo=.find__ecid"0 ~.work NB. todo needed because work is to be emptied before repair
+    work =: 0$0             NB. empty worklist, will be refilled by repair as merges propagate.
+    repair"0 todo
+  end.
+  0 0$0
+}}
+
+NB. repair; y is eclassid to repair
+repair =: {{
+  assert. par__ecid (]={~) y NB. should be top node.
+  uses =. >y{eciuses
+  eciuses =: (<0 3$a:) y} eciuses NB. temporarily wipe uses for y.
+  for_us. uses do.
+    'node ref' =. 2 split us
+    NB. TODO The node is in eciuses; how can it ever not be in the hash (en/ec)?
+    NB. try (when below working) to update enodes in place, rather than removing and adding again.
+    if. (#en) > enid=. enlu node do.
+      NB. delete enid from en, ec and update enlu
+      non =. <<<enid
+      en =. non{en
+      ec =. non{ec
+      NB. enlu =. en&i. NB. remove probably as update imminent anyhow
+    end.
+    NB. canonicalise node and append to hash; update eclassid
+    en=. en, ({. , find__ecid"0&.>@{:) node
+    ec=. ec, find__ecid ref
+    enlu =. en&i.
+  end.
+  newuses =. 0 2$a:
+  newrefs =. 0$0
+  for_us. uses do.
+    'node ref' =. 2 split us
+    node =. ({. find__ecid"0&.>@{:) node NB. canonicalise node
+    if. (#newuses) < usi=. node i. newuses do.
+      merge ref, usi{newrefs
+    end.
+    NB. enforce dict semantics by pre-pending and removing double keys (TODO: needed? better impl?)
+    newuses =. newuses,~ node
+    newrefs =. newrefs,~ find__ecid ref
+    mskun   =. ~: newuses
+    'newuses newrefs' =. mskun&# each newuses ,&< newrefs
+  end.
+  cany =. find__ecid y
+  eciuses =: (<(>cany{eciuses) , newuses,.<"+ newrefs)  cany} eciuses
+  0 0$0
 }}
 
 sym_z_ =: conew&'jsym'
