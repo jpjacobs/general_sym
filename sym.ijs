@@ -57,7 +57,7 @@ NB. PRIMADV=:;:'~//./..\\.]:}b.f.M.'
 NB. PRIMCON=:;:'^: . : :. :: ;.!.!:[.]."` @ @. @:&&.&:&.:F.F..F.:F:F:.F::H.L:S:t.'
 create=: {{
   NB. uf stores parents and class sizes (size correct for roots only, due to path compression)
-  ecid   =: unionfind 0
+  ecid   =:".> unionfind 0
   eciuses=: 0$a: NB. boxed 'uses' of each eclassid (enode,
   NB. i, version (for judging change) not needed?
   en   =: 0 2$a:  NB. enodes (str+canonical arg eclasses) stored
@@ -67,6 +67,7 @@ create=: {{
 }}
 NB. canonicalize enode: self with canonic (root) reps of args
 NB. any reason not to have enodes all be canonical?
+canon =: {{ ({. , find__ecid"0&.>@{:)y}}
 NB. handle in array fashion; canonicalise all at once
 
 arofu=: 1 : '5!:1<''u'''
@@ -86,7 +87,7 @@ NB. TODO or better str instead of ar? arg classes is one box with N args
 adden =: {{
   yy =. 2 {. boxopen y NB. TODO: assertions needed?
   NB. canonicalise y to get enode
-  newen =. ({. , find__ecid"0&.>@{:) yy
+  newen =. canon yy
   if. (#en)=eciInd=.enlu newen do. NB. new enode not known yet
     NB. inc version if needed
     eciInd =. {. add__ecid 1    NB. create new eclass id
@@ -210,7 +211,7 @@ repair =: {{
   newrefs =. 0$0
   for_us. uses do.
     'node ref' =. 2 split us
-    node =. ({. find__ecid"0&.>@{:) node NB. canonicalise node
+    node =. canon node NB. canonicalise node
     if. (#newuses) < usi=. node i. newuses do.
       merge ref, usi{newrefs
     end.
@@ -223,6 +224,52 @@ repair =: {{
   cany =. find__ecid y
   eciuses =: (<(>cany{eciuses) , newuses,.<"+ newrefs)  cany} eciuses
   0 0$0
+}}
+NB. show. Simple method to show the egraph info
+show=: {{ (<"0 ec),.en,.eciuses }}
+
+NB. matching procedure (complicated outer verb: enmatches
+NB. TODO: env should be replaced by two arrays; eclasses should be passed around; unless not changed, at "hich point we can refer to the version in the current sym object
+NB. match in: patter , eclassID, env
+match_in =: {{
+  'pat eid env'=:y
+  NB. leaf variable, noun or verb? TODO: what does it mean if pat key is int??
+  if. (#&>{:pat) *. -. (=<.) :: 0: >{.pat do.
+    id=.>{.pat
+    if. id e.~ env do.
+      NB. deref env, add env[id]=eid
+      1;env return.
+    else.
+      NB. (env[id]=eid); env
+    end.
+  else. NB. does one of the ways to define this class match the pattern?
+    for_en. eid{eclasses do. NB. eclasses should become arg as py version has awkward nested functions wihh lexical scoping
+      'matches ne'=. enmatches pat;enode;env
+      if. matches do. 1;ne return. end.
+    end.
+    0;env
+}}
+NB. enode matches:  y: Node, Enode, env ; all boxed
+enmatches =: {{
+  'pat enode env'=.y
+  if. enode ~:&{. pat do. 0;<'';'' return. end.
+  ne=. env
+  NB. if any arg not matching, return 0, else 1
+  for_a. pat ,.&{: enode ne do.
+    'matched ne' =: match_in a;env
+    if. -.matched do. 0;env return. end.
+  end.
+  1;ne
+}}
+
+NB. ematch: eclassids;enodes;pattern
+NB.  num;boxed;literal?
+NB.  enodes has lists of enodes corresponding to each eclassid
+ematch =: {{
+  'ecids enodes pat'=.y
+  NB. returns 0/1 for matches, if 0, also ret is empty to avoid wasted space
+  'matches ret' =. ecids ([: match_in pat;;)"0 enodes
+  ecids ;&(match&#) ret
 }}
 
 sym_z_ =: conew&'jsym'
