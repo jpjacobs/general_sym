@@ -52,6 +52,12 @@ NB. implementation details:
 NB. - no classes for enodes/eclasses as this would hamper array implementation + performance.
 NB. - jegg class represents egraph, keeps eclasses in unionfind
 NB. - based partially on https://colab.research.google.com/drive/1tNOQijJqe5tw-Pk9iqd6HHb2abC5aRid?usp=sharing
+NB. ideas for later
+NB. - precomputed thematic egraphs for the below, saving time; idioms; load extra egraph, then rebuild.
+NB. - apply node for argument sizes, size calculations
+NB. - apply node for argument units
+NB. - ball arithmetic
+
 coclass 'jsym'
 NB. PRIMADV=:;:'~//./..\\.]:}b.f.M.'
 NB. PRIMCON=:;:'^: . : :. :: ;.!.!:[.]."` @ @. @:&&.&:&.:F.F..F.:F:F:.F::H.L:S:t.'
@@ -115,6 +121,7 @@ add =: {{
   end.
 
   NB. Literal: prim (also adv/conj!) or named verb
+  NB. named verbs also used as stand-in arguments
   if. 0=L. op do.
     if. *&1 :: 0: op do. NB. numeric -> eclass id, not prim
       op return.
@@ -248,6 +255,7 @@ match_in =: {{
       if. matches do. 1;ne return. end.
     end.
     0;env
+  end.
 }}
 NB. enode matches:  y: Node, Enode, env ; all boxed
 enmatches =: {{
